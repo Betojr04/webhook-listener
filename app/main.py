@@ -87,15 +87,18 @@ device_tokens: dict[str, str] = {}  # user_id -> device_token
 async def send_imessage(to: str, text: str) -> bool:
     """
     Send message via iMessage API with safety check.
-    Only sends to whitelisted recipients.
+    Only sends to whitelisted recipients when iMessage API is configured.
     """
-    if to not in ALLOWED_RECIPIENTS:
-        logging.warning(f"🚫 Blocked attempt to send to non-whitelisted number: {to}")
-        return False
+    # Only enforce whitelist if iMessage API is actually configured
+    if IMESSAGE_API_URL and API_KEY:
+        if to not in ALLOWED_RECIPIENTS:
+            logging.warning(f"🚫 Blocked attempt to send to non-whitelisted number: {to}")
+            return False
 
+    # If no iMessage API configured, we're in web-only mode - allow all recipients
     if not IMESSAGE_API_URL or not API_KEY:
-        logging.error("❌ iMessage API not configured")
-        return False
+        logging.info(f"✅ Web-only mode: message saved to DB (no iMessage API)")
+        return True  # Success - message will be saved to DB
 
     try:
         async with httpx.AsyncClient(follow_redirects=True) as client:
