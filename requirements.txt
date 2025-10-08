@@ -6,6 +6,7 @@ sqlalchemy[asyncio]
 aiosqlite
 httpx
 pydantic
+email-validator
 aioapns
 passlib[bcrypt]
 python-jose[cryptography]
