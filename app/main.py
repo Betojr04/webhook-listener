@@ -26,6 +26,9 @@ from .services import push as push_service
 # Auth
 from .auth import hash_password, verify_password, create_access_token, get_current_user
 
+# Bots
+from .bots import get_all_bots, route_message_to_bot
+
 # 🔧 Compatibility shim (fixes MutableSet issue in Python 3.11+)
 import collections, collections.abc
 
@@ -179,6 +182,15 @@ async def save_message(chat_id, from_, to, text, is_from_me: bool):
 
 
 # -----------------------
+# Bots API
+# -----------------------
+@app.get("/api/v1/bots")
+async def get_bots():
+    """Return list of available AI bots"""
+    return get_all_bots()
+
+
+# -----------------------
 # SSE
 # -----------------------
 subscribers: list[asyncio.Queue] = []
@@ -286,31 +298,36 @@ async def ai_reply(question: str, metadata: dict | None = None) -> str:
 @app.post("/api/v1/messages/send")
 async def send_message(payload: dict = Body(...), current_user: str = Depends(get_current_user)):
     logging.info(f"📨 Received send request: {payload}")
-    chat_id = payload.get("chatId")
-    to = payload.get("to")
+
+    # New bot-based routing: 'to' is now the bot_id
+    bot_id = payload.get("to")
     text = payload.get("text", "")
-    logging.info(f"📨 Extracted - chatId: {chat_id}, to: {to}, text: {text}")
-    if not chat_id or not to or not text:
-        raise HTTPException(status_code=400, detail="chatId, to, text required")
 
-    # Send via iMessage API first (with whitelist check)
-    sent = await send_imessage(to, text)
-    if not sent:
-        raise HTTPException(status_code=403, detail="Recipient not in whitelist or send failed")
+    logging.info(f"📨 Extracted - bot_id: {bot_id}, text: {text}")
+    if not bot_id or not text:
+        raise HTTPException(status_code=400, detail="to (bot_id) and text required")
 
-    # Save your message to database
-    user_msg = await save_message(chat_id, MY_IMESSAGE_NUMBER or "me", to, text, True)
+    # Use bot_id as chat_id for conversation context
+    chat_id = bot_id
 
-    # Generate AI reply in background
+    # For web/iOS app: no iMessage sending, just save and generate response
+    # Skip iMessage API call entirely for bot conversations
+
+    # Save user message to database
+    user_msg = await save_message(chat_id, current_user, bot_id, text, True)
+
+    # Generate AI reply in background using bot routing
     async def handle_ai():
         try:
-            reply = await ai_reply(text, metadata={"chatId": chat_id, "from": to})
+            # Route to the selected bot
+            reply = await route_message_to_bot(bot_id, text)
             if reply:
-                await save_message(chat_id, "agent", to, reply, False)
-                # Note: AI reply saved to DB but not auto-sent via iMessage
-                # (webhook will handle sending when response comes back)
+                # Save bot's reply to database
+                ai_msg = await save_message(chat_id, bot_id, current_user, reply, False)
+                # Broadcast to SSE subscribers
+                await _broadcast(ai_msg)
         except Exception as e:
-            logging.error(f"❌ AI reply error: {e}")
+            logging.error(f"❌ Bot reply error: {e}")
 
     asyncio.create_task(handle_ai())
 
