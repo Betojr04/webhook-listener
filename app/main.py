@@ -36,11 +36,11 @@ load_dotenv()
 
 app = FastAPI()
 
-# Enable CORS for web dashboard
+# Enable CORS for web dashboard (allow all origins for deployed frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins (or specify your Vercel domain)
+    allow_credentials=False,  # Must be False when allow_origins is "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -3,7 +3,9 @@
 ## ✅ All Fixes Completed
 
 ### 1. Requirements.txt - Fixed ✅
+
 Added all missing dependencies:
+
 - `google-generativeai` - Gemini AI
 - `python-dotenv` - Environment variables
 - `sqlalchemy[asyncio]` - Async database
@@ -13,23 +15,28 @@ Added all missing dependencies:
 - `aioapns` - Apple Push Notifications
 
 ### 2. Safety Whitelist - Added ✅
+
 **Location:** `app/main.py:42-47`
 
 Only sends messages to approved recipients:
+
 - Your phone: `+14803187213`
 - Your email: `betomasia12@gmail.com`
 
 Any other recipients are blocked and logged.
 
 ### 3. Webhook Logic - Fixed ✅
+
 **Location:** `app/main.py:237-252`
 
 **Before:**
+
 ```python
 if from_number == MY_IMESSAGE_NUMBER:  # Wrong!
 ```
 
 **After:**
+
 ```python
 if not is_from_me and from_number != MY_IMESSAGE_NUMBER:  # Correct!
 ```
@@ -37,7 +44,9 @@ if not is_from_me and from_number != MY_IMESSAGE_NUMBER:  # Correct!
 Now correctly replies to messages FROM others, not your own messages.
 
 ### 4. Environment Variables - Cleaned ✅
+
 **Removed unused variables:**
+
 - `AI_PROVIDER=both` (not implemented)
 - `ALPHA_VANTAGE_API_KEY` (unused)
 - `DAISY_URL`, `DAISY_API_KEY`, `DAISY_PAYLOAD_STYLE` (unused)
@@ -45,12 +54,15 @@ Now correctly replies to messages FROM others, not your own messages.
 - `ALLOWED_NUMBER` (replaced by whitelist)
 
 **Fixed:**
+
 - `GEMINI_MODEL`: Changed from `models/gemini-2.5-flash` to `gemini-1.5-flash` (valid model)
 
 ### 5. Git Security - Enhanced ✅
+
 **Location:** `.gitignore`
 
 Added comprehensive ignore patterns:
+
 - Virtual environments (`venv/`, `.venv/`)
 - Environment files (`.env`, `.env.local`)
 - Database files (`*.db`, `*.sqlite`)
@@ -59,6 +71,7 @@ Added comprehensive ignore patterns:
 - IDE files (`.vscode/`, `.idea/`)
 
 ### 6. APNs Integration - Complete ✅
+
 **Location:** `app/services/push.py` + `app/main.py`
 
 - Migrated from old `apns2` to modern `aioapns`
@@ -106,25 +119,28 @@ Added comprehensive ignore patterns:
 ## 📡 API Endpoints
 
 ### REST API
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/chats` | List all chats |
-| GET | `/api/v1/messages?chatId={id}&limit=50` | Get messages for a chat |
-| POST | `/api/v1/messages/send` | Send a message (with whitelist check) |
-| GET | `/api/v1/stream` | Server-Sent Events stream |
-| POST | `/api/v1/device/register` | Register device token |
-| DELETE | `/api/v1/device/unregister` | Unregister device token |
+
+| Method | Endpoint                                  | Description                           |
+| ------ | ----------------------------------------- | ------------------------------------- |
+| GET    | `/api/v1/chats`                         | List all chats                        |
+| GET    | `/api/v1/messages?chatId={id}&limit=50` | Get messages for a chat               |
+| POST   | `/api/v1/messages/send`                 | Send a message (with whitelist check) |
+| GET    | `/api/v1/stream`                        | Server-Sent Events stream             |
+| POST   | `/api/v1/device/register`               | Register device token                 |
+| DELETE | `/api/v1/device/unregister`             | Unregister device token               |
 
 ### Webhook
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/new-message` | Receives incoming iMessages (requires `X-Webhook-Secret` header) |
+
+| Method | Endpoint         | Description                                                        |
+| ------ | ---------------- | ------------------------------------------------------------------ |
+| POST   | `/new-message` | Receives incoming iMessages (requires `X-Webhook-Secret` header) |
 
 ---
 
 ## 🔄 Message Flow
 
 ### Sending a Message (iOS → iMessage)
+
 ```
 1. User types message in iOS app
 2. iOS app → POST /api/v1/messages/send
@@ -135,6 +151,7 @@ Added comprehensive ignore patterns:
 ```
 
 ### Receiving a Message (iMessage → iOS)
+
 ```
 1. Someone sends you an iMessage
 2. iMessage API → POST /new-message (webhook)
@@ -151,6 +168,7 @@ Added comprehensive ignore patterns:
 ## 🔒 Security Features
 
 ### 1. Whitelist Protection
+
 **Location:** `app/main.py:69-95`
 
 ```python
@@ -162,6 +180,7 @@ async def send_imessage(to: str, text: str) -> bool:
 ```
 
 ### 2. Webhook Secret
+
 **Location:** `app/main.py:214-216`
 
 ```python
@@ -172,7 +191,9 @@ async def new_message(request: Request, x_webhook_secret: str = Header(None)):
 ```
 
 ### 3. Environment Variables
+
 All sensitive data in `.env` (not committed to git):
+
 - API keys (Gemini, iMessage, APNs)
 - Phone numbers
 - Webhook secrets
@@ -182,6 +203,7 @@ All sensitive data in `.env` (not committed to git):
 ## 📊 Database Schema
 
 ### Chats Table
+
 ```sql
 CREATE TABLE chats (
     id VARCHAR PRIMARY KEY,
@@ -190,6 +212,7 @@ CREATE TABLE chats (
 ```
 
 ### Messages Table
+
 ```sql
 CREATE TABLE messages (
     id VARCHAR PRIMARY KEY,
@@ -208,6 +231,7 @@ CREATE TABLE messages (
 ## 🧪 Testing
 
 ### Test Endpoints
+
 ```bash
 # List chats
 curl http://localhost:8000/api/v1/chats
@@ -227,6 +251,7 @@ curl -X POST http://localhost:8000/api/v1/messages/send \
 ```
 
 ### Test SSE Stream
+
 ```bash
 # In one terminal: watch the stream
 curl -N http://localhost:8000/api/v1/stream
@@ -244,12 +269,14 @@ curl -X POST http://localhost:8000/api/v1/messages/send \
 ## 🚀 Running the Server
 
 ### Start Server
+
 ```bash
 cd /Users/albertovaltierrajr/Desktop/webhook-listener
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Expected Startup Logs
+
 ```
 INFO:     Uvicorn running on http://0.0.0.0:8000
 INFO:root:✅ Gemini ready (AI Studio, model=gemini-1.5-flash)
@@ -260,6 +287,7 @@ INFO:     Application startup complete.
 ```
 
 ### Server is Running on:
+
 - **Local:** http://localhost:8000
 - **Network:** http://0.0.0.0:8000
 - **API Docs:** http://localhost:8000/docs (FastAPI auto-generated)
@@ -268,32 +296,8 @@ INFO:     Application startup complete.
 
 ## 📝 Configuration Files
 
-### `.env` (Environment Variables)
-```env
-# API Keys
-GEMINI_API_KEY=AIzaSyCp8tsV1tatOL1onecqQGWmlQHSyZ67WIY
-IMESSAGE_API_KEY=super-secret-key
-
-# iMessage Configuration
-MY_IMESSAGE_NUMBER=+14803187213
-IMESSAGE_API_URL=http://127.0.0.1:1234
-WEBHOOK_SECRET=change-me
-
-# AI Configuration
-GEMINI_MODEL=gemini-1.5-flash
-
-# User Configuration
-MY_APPLE_ID_EMAIL=betomasia12@gmail.com
-
-# APNs Configuration
-APNS_KEY_ID=996B79FP9X
-APNS_TEAM_ID=9NRN2DSX38
-APNS_AUTH_KEY_PATH=/Users/albertovaltierrajr/Desktop/AuthKey_996B79FP9X.p8
-APNS_TOPIC=com.beto.iMessageBridgeClient
-APNS_USE_SANDBOX=true
-```
-
 ### `requirements.txt` (Dependencies)
+
 ```
 fastapi
 uvicorn
@@ -330,16 +334,19 @@ aioapns
 ## 🐛 Troubleshooting
 
 ### APNs Not Working
+
 - Check `.p8` file exists at path in `.env`
 - Verify all `APNS_*` variables are set
 - Look for "✅ APNs ready" in server logs
 
 ### Messages Not Sending
+
 - Check whitelist includes recipient
 - Look for "🚫 Blocked attempt" in logs
 - Verify iMessage API is running
 
 ### Database Issues
+
 - Delete `app.db` and restart server
 - Server will recreate database on startup
 
